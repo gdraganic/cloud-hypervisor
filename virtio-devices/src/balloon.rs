@@ -70,11 +70,15 @@ const STATS_REQUEST_EVENT: u16 = EPOLL_HELPER_EVENT_LAST + 5;
 // Size of a PFN in the balloon interface.
 const VIRTIO_BALLOON_PFN_SHIFT: u64 = 12;
 
-// Upper bound on a single inflate or deflate descriptor length, in
-// bytes. Matches the Linux driver, which submits at most
-// VIRTIO_BALLOON_ARRAY_PFNS_MAX of 256 PFN entries of 4 bytes each per
-// descriptor.
-const VIRTIO_BALLOON_MAX_PFN_BYTES: u32 = 256 * 4;
+// Upper bound on a single inflate or deflate descriptor length, in bytes.
+// The virtio-balloon spec puts no bound on desc.len, so a hostile guest can
+// submit a huge descriptor and make the device thread walk millions of PFN
+// entries. This bounds that work per descriptor. It must be large enough for
+// every real driver: the Linux driver caps at VIRTIO_BALLOON_ARRAY_PFNS_MAX
+// (256 PFNs = 1024 bytes), but the Windows virtio-win driver submits a full
+// page of PFNs (1024 PFNs = 4096 bytes), so a 256-PFN bound silently dropped
+// every Windows inflate/deflate and broke memory reclaim on Windows guests.
+const VIRTIO_BALLOON_MAX_PFN_BYTES: u32 = 4096;
 
 // Enable statistics virtqueue.
 const VIRTIO_BALLOON_F_STATS_VQ: u64 = 1;
